@@ -1,4 +1,3 @@
-# tests/test_gui.py
 import pytest
 import tkinter as tk
 import time

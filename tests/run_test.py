@@ -1,4 +1,3 @@
-# tests/run_tests.py
 import pytest
 import os
 import sys

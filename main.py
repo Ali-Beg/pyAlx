@@ -1,4 +1,3 @@
-# main.py
 import argparse
 from src.core.shell import Shell
 from src.gui.main_window import MainWindow

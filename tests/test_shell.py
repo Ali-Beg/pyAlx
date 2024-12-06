@@ -1,4 +1,3 @@
-# tests/test_shell.py
 import os
 import pytest
 from src.core.shell import Shell
@@ -45,12 +44,35 @@ class TestShell:
         assert captured.err == ''  # No errors
         
     def test_pipe_error_handling(self, shell, capsys):
-        # Test pipe with nonexistent command
+        """Test error handling for nonexistent commands in pipe"""
         shell.execute_command('echo test | nonexistentcmd')
         captured = capsys.readouterr()
-        assert "Command not found" in captured.out
+        assert "Command not found: nonexistentcmd" in captured.out
         
     def test_pipe_background(self, shell):
         # Test piped command in background
         shell.execute_command('ping localhost | find "Reply" &')
         assert len(shell.background_processes) > 0
+
+    def test_invalid_command_input(self, shell, capsys):
+        shell.execute_command("")
+        shell.execute_command(None)
+        shell.execute_command("   ")
+        captured = capsys.readouterr()
+        assert captured.out == ""
+
+    def test_command_cleanup(self, shell):
+        shell.execute_command("sleep 1 &")
+        assert len(shell.background_processes) > 0
+        shell.stop()
+        assert len(shell.background_processes) == 0
+
+    def test_io_redirection_errors(self, shell, capsys):
+        shell.execute_command("cat < nonexistent.txt")
+        captured = capsys.readouterr()
+        assert "No such file" in captured.out
+
+    def test_pipe_chain_errors(self, shell, capsys):
+        shell.execute_command("ls | | sort")
+        captured = capsys.readouterr()
+        assert "Invalid pipe syntax" in captured.out

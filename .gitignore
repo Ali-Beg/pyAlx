@@ -15,3 +15,14 @@ venv/
 
 # Logs
 *.log
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+*.py,cover
+
+# pytest
+.pytest_cache/
+__pycache__/

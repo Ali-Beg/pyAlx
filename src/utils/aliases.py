@@ -1,4 +1,3 @@
-# src/utils/aliases.py
 class AliasManager:
     def __init__(self):
         self.aliases = {}

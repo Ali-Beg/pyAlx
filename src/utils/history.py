@@ -1,4 +1,3 @@
-# src/utils/history.py
 import os
 import readline
 from typing import List, Optional

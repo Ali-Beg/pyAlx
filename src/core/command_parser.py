@@ -1,4 +1,3 @@
-# src/core/command_parser.py
 class CommandParser:
     def __init__(self):
         pass

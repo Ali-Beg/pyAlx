@@ -1,4 +1,3 @@
-# src/utils/config.py
 import os
 import configparser
 

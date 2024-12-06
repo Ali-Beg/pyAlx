@@ -1,4 +1,3 @@
-# tests/test_helpers.py
 import pytest
 import os
 import getpass

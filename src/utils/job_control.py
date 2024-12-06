@@ -1,4 +1,3 @@
-# src/utils/job_control.py
 class JobControl:
     def __init__(self):
         self.jobs = {}

@@ -1,4 +1,3 @@
-# src/core/executable_finder.py
 import os
 import shutil
 

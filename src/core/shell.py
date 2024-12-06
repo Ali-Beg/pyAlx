@@ -1,4 +1,3 @@
-# src/core/shell.py
 import os
 import subprocess
 import readline
@@ -25,6 +24,7 @@ class Shell:
     
     def __init__(self):
         self.running = True
+        self.prompt = "myshell> "  # Add this line
         self.prompt_generator = ShellPrompt()
         self.parser = CommandParser()
         self.executor = ExecutableFinder()
@@ -108,134 +108,147 @@ class Shell:
         prev_pipe = stdin
         
         try:
-            # Create all processes in the pipeline
+            # Validate all commands first
+            for cmd, args in commands:
+                executable = self.executor.find_executable(cmd)
+                if not executable:
+                    print(f"Command not found: {cmd}")
+                    return False
+
+            # Create pipes
             for i, (cmd, args) in enumerate(commands):
-                # Create pipe for next command
+                executable = self.executor.find_executable(cmd)
+                
+                # Setup pipes
                 if i < len(commands) - 1:
                     read_fd, write_fd = os.pipe()
                     next_pipe = write_fd
                 else:
                     next_pipe = stdout
-                
-                # Find executable
-                executable = self.executor.find_executable(cmd)
-                if not executable:
-                    print(f"Command not found: {cmd}")
-                    return
-                
-                # Create process with proper stream redirection
-                process = subprocess.Popen(
-                    [executable] + args,
-                    stdin=prev_pipe,
-                    stdout=next_pipe if next_pipe else subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    close_fds=True
-                )
-                
-                processes.append(process)
-                
-                # Setup for next iteration
-                if i < len(commands) - 1:
-                    os.close(write_fd)
-                    prev_pipe = read_fd
-                else:
-                    prev_pipe = None
-            
-            # Handle background processes
+
+                try:
+                    process = subprocess.Popen(
+                        [executable] + args,
+                        stdin=prev_pipe,
+                        stdout=next_pipe if next_pipe else subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        bufsize=1  # Line buffered
+                    )
+                    
+                    processes.append(process)
+                    
+                    # Setup for next iteration
+                    if i < len(commands) - 1:
+                        os.close(write_fd)
+                        prev_pipe = read_fd
+
+                except Exception as e:
+                    print(f"Error starting process {cmd}: {e}")
+                    return False
+
+            # Background process handling
             if is_background:
                 pid = processes[-1].pid
                 self.background_processes[pid] = processes[-1]
                 print(f"[{pid}] Running in background")
-                return
-            
-            # Wait for completion and get output
+                return True
+
+            # Wait and collect output
+            success = True
             for i, process in enumerate(processes):
-                stdout, stderr = process.communicate()
-                
-                if stderr:
-                    print(f"Error in command {commands[i][0]}: {stderr}")
-                
-                if i == len(processes) - 1 and stdout:
-                    print(stdout.strip())
-                    
+                try:
+                    output, error = process.communicate()
+                    if error:
+                        print(f"Error in {commands[i][0]}: {error.strip()}")
+                        success = False
+                    if i == len(processes) - 1 and output and not stdout:
+                        print(output.strip())
+                except Exception as e:
+                    print(f"Error in process communication: {e}")
+                    success = False
+
+            return success
+
         except Exception as e:
             print(f"Pipe execution failed: {e}")
+            return False
+            
         finally:
-            # Cleanup processes
+            # Clean up processes and file descriptors
             for process in processes:
                 try:
-                    process.kill()
+                    if process.poll() is None:
+                        process.kill()
                 except:
                     pass
 
     def execute_command(self, user_input):
-        """Execute command with I/O redirection support"""
+        """Execute command with proper error handling"""
         if not user_input.strip():
             return
-            
-        BuiltInCommands.add_to_history(user_input)
-        self._check_background_processes()
-        
-        # Update unpacking to match all returned values
+
+        # Update unpacking to match parser return values
         command, args, is_background, piped_commands, input_file, output_file = self.parser.parse(user_input)
         
         if not command:
             return
             
-        # Handle built-in commands
-        if command in self.built_ins:
-            success, output = self.built_ins[command](args)
-            if output:
-                if output_file:
-                    with open(output_file, 'w') as f:
-                        f.write(output)
-                else:
-                    print(output)
-            return
-        
-        # Handle external commands
-        executable = self.executor.find_executable(command)
-        if not executable:
-            print(f"Command not found: {command}")
-            return
-            
         try:
-            # Setup I/O redirection
-            stdin = open(input_file, 'r') if input_file else None
-            stdout = open(output_file, 'w') if output_file else None
-            
             if piped_commands:
+                # Handle piped commands
+                for cmd, _ in [(command, args)] + piped_commands:
+                    if not self.executor.find_executable(cmd):
+                        print(f"Command not found: {cmd}")
+                        return
+                        
                 self.execute_piped_commands(
                     [(command, args)] + piped_commands,
                     is_background,
-                    stdin,
-                    stdout
+                    input_file,
+                    output_file
                 )
             else:
-                process = subprocess.Popen(
-                    [executable] + args,
-                    stdin=stdin or subprocess.PIPE,
-                    stdout=stdout or subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-                
-                if is_background:
-                    self.background_processes[process.pid] = process
-                    print(f"[{process.pid}] Running in background")
-                else:
-                    output, error = process.communicate()
-                    if error:
-                        print(f"Error: {error.strip()}")
-                    if output and not output_file:
-                        print(output.strip())
-                        
+                # Handle single command
+                if command in self.built_ins:
+                    success, output = self.built_ins[command](args)
+                    if output:
+                        if output_file:
+                            with open(output_file, 'w') as f:
+                                f.write(output)
+                        else:
+                            print(output)
+                    return
+
+                executable = self.executor.find_executable(command)
+                if not executable:
+                    print(f"Command not found: {command}")
+                    return
+
+                try:
+                    process = subprocess.Popen(
+                        [executable] + args,
+                        stdin=open(input_file, 'r') if input_file else None,
+                        stdout=open(output_file, 'w') if output_file else subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True
+                    )
+
+                    if is_background:
+                        self.background_processes[process.pid] = process
+                        print(f"[{process.pid}] Running in background")
+                    else:
+                        output, error = process.communicate()
+                        if error:
+                            print(error.strip())
+                        if output and not output_file:
+                            print(output.strip())
+
+                except Exception as e:
+                    print(f"Error executing command: {e}")
+                    
         except Exception as e:
-            print(f"Error executing command: {e}")
-        finally:
-            if stdin: stdin.close()
-            if stdout: stdout.close()
+            print(f"Error: {e}")
 
     def get_prompt(self):
         """Get the current prompt string"""

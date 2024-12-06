@@ -1,4 +1,3 @@
-# src/gui/main_window.py
 import tkinter as tk
 from tkinter import ttk, font
 from ttkthemes import ThemedTk

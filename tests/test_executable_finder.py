@@ -1,4 +1,3 @@
-# tests/test_executable_finder.py
 import pytest
 import os
 from src.core.executable_finder import ExecutableFinder

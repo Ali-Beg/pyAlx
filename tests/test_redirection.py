@@ -1,4 +1,3 @@
-# tests/test_redirection.py
 import pytest
 import os
 from src.core.shell import Shell

@@ -1,4 +1,3 @@
-# src/utils/environment.py
 import os
 
 class Environment:

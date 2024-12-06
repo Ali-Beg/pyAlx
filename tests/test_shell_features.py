@@ -1,4 +1,3 @@
-# tests/test_shell_features.py
 import pytest
 import os
 import configparser
