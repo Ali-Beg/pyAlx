@@ -1,17 +1,18 @@
 black==24.10.0
 click==8.1.7
 colorama==0.4.6
+coverage==7.6.9
 iniconfig==2.0.0
 mypy==1.13.0
 mypy-extensions==1.0.0
 packaging==24.2
 pathspec==0.12.1
+pillow==11.0.0
 platformdirs==4.3.6
 pluggy==1.5.0
-# pytest==8.3.4
-typing_extensions==4.12.2
-pytest==7.4.3
-pytest-cov==4.1.0
 pyreadline3==3.4.1
-
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==4.1.0
 ttkthemes==3.2.2
+typing_extensions==4.12.2
