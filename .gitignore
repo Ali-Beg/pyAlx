@@ -1,0 +1,17 @@
+# Byte-compiled files
+*.py[cod]
+__pycache__/
+
+# Virtual environments
+venv/
+.env/
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+
+# Logs
+*.log
